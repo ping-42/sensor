@@ -22,9 +22,6 @@ var BuildDate string
 var CommitId string
 var sensorLogger = logger.WithTestType("sensor")
 
-var sensorId string
-var sensorSecret string
-
 func init() {
 	sensorLogger.Info(fmt.Sprintf("Sensor Starting - version %s (commit %s) built %s", SensorVersion, CommitId, BuildDate))
 }

@@ -25,8 +25,6 @@ import (
 	"github.com/ping-42/42lib/icmp"
 )
 
-const OS_PING42_ENV_TOKEN = "PING42_SENSOR_TOKEN"
-
 // Sensor main sensor struct
 type Sensor struct {
 	sensorId     string
@@ -209,7 +207,7 @@ func (s *Sensor) buildJwtToken() (jwtToken string, err error) {
 
 func (s *Sensor) parseEnvToken() (err error) {
 
-	sensorEnvToken := os.Getenv(OS_PING42_ENV_TOKEN)
+	sensorEnvToken := os.Getenv("PING42_SENSOR_TOKEN")
 	if sensorEnvToken == "" {
 		err = fmt.Errorf("Missing PING42_SENSOR_TOKEN in the env var!")
 		return
