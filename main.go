@@ -16,14 +16,17 @@ const goroutineContextTimeout = 90 * time.Second
 // goroutinesPoolSize adjust the limit of Goroutines
 const goroutinesPoolSize = 66
 
-// Build-time information used to make sense of the logs
-var SensorVersion string
-var BuildDate string
-var CommitId string
+// Release versioning magic
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 var sensorLogger = logger.WithTestType("sensor")
 
 func init() {
-	sensorLogger.Info(fmt.Sprintf("Sensor Starting - version %s (commit %s) built %s", SensorVersion, CommitId, BuildDate))
+	sensorLogger.Info(fmt.Sprintf("Sensor Starting - version %s (commit %s) built %s", version, commit, date))
 }
 
 func main() {
