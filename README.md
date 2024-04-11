@@ -1,17 +1,24 @@
-# Ping42 Sensor
+# PING42 Sensor
 
-This repository contains the code that belongs to the Ping 42 Sensor. Its code builds
-into a docker image that can then be deployed in various locations.
+Follow these instructions in order to start contributing telemetry to the PING42 protocol, help study the internet, ensure uptime for a whole universe of applications and receive rewards for it.
 
-## Testing
-It is currently set up to test locally on localhost:8080.
+## Running a Sensor
 
+After obtaining a Sensor token, starting a sensor on any system with a working Docker installation is very simple:
 ```bash
-go mod vendor
-docker build . -t ping-42/sensor
+docker run --rm -ti -e PING42_SENSOR_TOKEN="XXXXX" ghcr.io/ping-42/sensor:latest
 ```
-- run the container
+
+This should start sending telemetry to the network immediately and you should see the sensor as being online.
+
+## Alternative Installation
+
+In order to download a binary sensor build, its SBOM and various release artifacts, pelase head over to the [Releases](https://github.com/ping-42/sensor/releases) page.
+
+## Testing & Development
+
+Development is best done via a Github Codespace - head over to the [42lib](https://github.com/ping-42/42lib) page for more information on contributing code. We really appreciate your interest!
 
 ```bash
-docker run --rm -p 8080:8080 --name ping42-sensor ping-42/sensor
+go run .
 ```
