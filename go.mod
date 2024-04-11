@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/gobwas/ws v1.3.2
 	github.com/google/uuid v1.6.0
-	github.com/ping-42/42lib v0.1.1
+	github.com/ping-42/42lib v0.1.3
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/sirupsen/logrus v1.9.3
