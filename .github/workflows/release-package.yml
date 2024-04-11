@@ -6,9 +6,9 @@ on:
       - 'v*'
 
 permissions:
-   contents: write # needed to write releases
-   id-token: write # needed for keyless signing
-   packages: write # needed for ghcr access
+   contents: write
+   id-token: write
+   packages: write
 
 jobs:
   release:

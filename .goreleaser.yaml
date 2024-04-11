@@ -1,7 +1,5 @@
 project_name: ping42-sensor
 
-# setups builds for linux and darwin on amd64 and arm64
-# https://goreleaser.com/customization/build
 builds:
 - env:
   - CGO_ENABLED=0
@@ -9,15 +7,13 @@ builds:
   - linux
   goarch:
   - amd64
-#  - arm64
-  # ensures mod timestamp to be the commit timestamp
+  - arm64
+
   mod_timestamp: '{{ .CommitTimestamp }}'
   flags:
     # trims path
     - -trimpath
   ldflags:
-    # use commit date instead of current date as main.date
-    # only needed if you actually use those things in your main package, otherwise can be ignored.
     - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{ .CommitDate }}
   id: "sensor"
   binary: "sensor"
@@ -59,22 +55,25 @@ dockers:
     - "--label=org.opencontainers.image.revision={{.FullCommit}}"
     - "--label=org.opencontainers.image.version={{.Version}}"
     - "--label=org.opencontainers.image.source={{.GitURL}}"
-# - image_templates:
-#   - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
-#   use: buildx
-#   goarch: arm64
-#   dockerfile: Dockerfile
-#   build_flag_templates:
-#     - "--platform=linux/arm64/v8"
-#     - "--pull"
-#     - "--label=org.opencontainers.image.created={{.Date}}"
-#     - "--label=org.opencontainers.image.name={{.ProjectName}}"
-#     - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-#     - "--label=org.opencontainers.image.version={{.Version}}"
-#     - "--label=org.opencontainers.image.source={{.GitURL}}"
-
+- image_templates:
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
+  use: buildx
+  goarch: arm64
+  dockerfile: Dockerfile
+  build_flag_templates:
+    - "--platform=linux/arm64/v8"
+    - "--pull"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.name={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
+    - "--label=org.opencontainers.image.source={{.GitURL}}"
 docker_manifests:
 - name_template: "ghcr.io/ping-42/sensor:{{ .Version }}"
   image_templates:
   - "ghcr.io/ping-42/sensor:{{ .Version }}-amd64"
-#  - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
+- name_template: "ghcr.io/ping-42/sensor:latest"
+  image_templates:
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-amd64"
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
