@@ -20,5 +20,6 @@ In order to download a binary sensor build, its SBOM and various release artifac
 Development is best done via a Github Codespace - head over to the [42lib](https://github.com/ping-42/42lib) page for more information on contributing code. We really appreciate your interest!
 
 ```bash
+export PING42_TELEMETRY_SERVER="ws://localhost:8080"
 go run .
 ```

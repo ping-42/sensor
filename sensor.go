@@ -34,19 +34,22 @@ type Sensor struct {
 	Tasks  map[sensorTask.TaskName]sensorTask.TaskRunner
 }
 
-func (s *Sensor) connectToWsServer() (err error) {
+// Build a JWT Token and connect to the telemetry server
+func (s *Sensor) connectToTelemetryServer() (err error) {
 
 	jwtToken, err := s.buildJwtToken()
 	if err != nil {
-		sensorLogger.Error("buildAuthToken() error", err.Error())
+		sensorLogger.WithFields(log.Fields{
+			"error": err.Error(),
+		}).Error("Unable to build a JWT Token.")
 		return
 	}
 
 	wsConn, err := wsConnectToServer(jwtToken)
 	if err != nil {
-		sensorLogger.Error("wsConnectToServer() error", err.Error())
 		return
 	}
+
 	s.WsConn = wsConn
 	return
 }
@@ -59,7 +62,9 @@ func (s *Sensor) handleTasks() (err error) {
 	for {
 		msg, op, er := wsutil.ReadServerData(s.WsConn)
 		if er != nil {
-			sensorLogger.Error("failed to read message from server", er.Error())
+			sensorLogger.WithFields(log.Fields{
+				"error": er.Error(),
+			}).Error("Failed to read task message from server!")
 			return
 		}
 
@@ -205,13 +210,8 @@ func (s *Sensor) buildJwtToken() (jwtToken string, err error) {
 	return
 }
 
-func (s *Sensor) parseEnvToken() (err error) {
-
-	sensorEnvToken := os.Getenv("PING42_SENSOR_TOKEN")
-	if sensorEnvToken == "" {
-		err = fmt.Errorf("Missing PING42_SENSOR_TOKEN in the env var!")
-		return
-	}
+// Parses a Sensor Token for use in authentication and telemetry submission
+func (s *Sensor) parseSensorToken(sensorEnvToken string) (err error) {
 
 	t, err := base64.StdEncoding.DecodeString(sensorEnvToken)
 	if err != nil {
@@ -230,20 +230,37 @@ func (s *Sensor) parseEnvToken() (err error) {
 	return
 }
 
+// Establish a Websocket connection to the telemetry server
 func wsConnectToServer(jwtToken string) (conn net.Conn, err error) {
 
-	// TODO get the URL from the ENVs
-	// TODO send token as header
-	dialURL := fmt.Sprintf("ws://localhost:8080/?sensor_token=%v", url.QueryEscape(jwtToken))
+	// Allow the URL to be overridden
+	telemetryServerUrl := os.Getenv("PING42_TELEMETRY_SERVER")
+	if telemetryServerUrl == "" {
+		telemetryServerUrl = "wss://api.ping42.net"
+	}
 
+	//TODO: Should we send the token here as a header?
+	//TODO: How do we make sure this is always https?
+	dialURL := fmt.Sprintf("%v/?sensor_token=%v", telemetryServerUrl, url.QueryEscape(jwtToken))
+
+	// Place a connection request
 	conn, _, _, err = ws.Dial(context.Background(), dialURL)
 
 	if err != nil {
-		err = fmt.Errorf("cannot connect:%v", err)
+		sensorLogger.WithFields(log.Fields{
+			"localAddr":       conn.LocalAddr().String(),
+			"remoteAddr":      conn.RemoteAddr().String(),
+			"telemetryServer": telemetryServerUrl,
+			"error":           fmt.Errorf("%v", err),
+		}).Error("Unable to connect to telemetry server")
 		return
 	}
+
 	sensorLogger.WithFields(log.Fields{
-		"LocalAddr": conn.LocalAddr(),
-	}).Info("Connected to server")
+		"localAddr":       conn.LocalAddr(),
+		"remoteAddr":      conn.RemoteAddr().String(),
+		"telemetryServer": telemetryServerUrl,
+	}).Info("Connection to telemetry server established...")
+
 	return
 }

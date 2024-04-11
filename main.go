@@ -3,11 +3,11 @@
 package main
 
 import (
-	"fmt"
+	"os"
 	"time"
 
 	"github.com/ping-42/42lib/logger"
-	// telemetry "github.com/ping-42/sensor/src/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 // goroutineTimeout timeout duration
@@ -26,7 +26,11 @@ var (
 var sensorLogger = logger.WithTestType("sensor")
 
 func init() {
-	sensorLogger.Info(fmt.Sprintf("Sensor Starting - version %s (commit %s) built %s", version, commit, date))
+	sensorLogger.WithFields(log.Fields{
+		"version":   version,
+		"commit":    commit,
+		"buildDate": date,
+	}).Info("Starting PING42 Sensor Client...")
 }
 
 func main() {
@@ -34,29 +38,37 @@ func main() {
 	// init the base sensor struct
 	s := Sensor{}
 
-	err := s.parseEnvToken()
-	if err != nil {
-		sensorLogger.Error("parseEnvToken err!")
-		return
+	sensorEnvToken := os.Getenv("PING42_SENSOR_TOKEN")
+	if sensorEnvToken == "" {
+		sensorLogger.Error("Missing PING42_SENSOR_TOKEN environment variable!")
+		os.Exit(2)
 	}
 
-	// connect to ws server
-	err = s.connectToWsServer()
+	err := s.parseSensorToken(sensorEnvToken)
 	if err != nil {
-		sensorLogger.Error("error while connectToWsServer()", err.Error())
-		return
+		sensorLogger.Error("Unable to parse PING42_SENSOR_TOKEN - please make you copied it correctly.")
+		os.Exit(3)
 	}
 
-	// close the ws connection
+	// connect to telemetry server
+	err = s.connectToTelemetryServer()
+	if err != nil {
+		sensorLogger.Error("Unable to establish telemetry connection")
+		os.Exit(4)
+	}
+
+	// defer closing the ws connection
 	defer s.WsConn.Close()
 
 	// start monitoring CPU usage, RAM... in a goroutine.
 	go monitorHostTelementry()
 
 	// start working
+
+	//TODO This should probably be handled somehow in a loop with tasks being discarded upon failure
 	err = s.handleTasks()
 	if err != nil {
-		sensorLogger.Error("error while handleTasks()", err.Error())
-		return
+		sensorLogger.Error("error while handleTasks(): ", err.Error())
+		os.Exit(5)
 	}
 }
