@@ -1,0 +1,6 @@
+# OSX Resource Forks
+sensor
+.DS_Store
+.vscode/
+vendor/
+dist/

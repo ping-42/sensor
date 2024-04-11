@@ -1,0 +1,119 @@
+name: Golang Library Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - '.github/**'
+      - '.devcontainer/**'
+      - '*.code-workspace'
+  pull_request:
+    types: [ assigned, opened, synchronize, reopened ]
+
+# By default, no permissions are given to any job's GITHUB_TOKEN
+permissions:
+  contents: read
+
+jobs:
+  vettest:
+    name: Go quality vetting and testing
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setting up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+        id: go
+
+      - name: Getting dependencies...
+        shell: bash
+        run: |
+          go get -v -t -d ./...
+
+      - name: Vetting code...
+        shell: bash
+        run: |
+          go vet ./...
+
+      # We want to exclude certain folders from testing, since they contain stuff like structures
+      - name: Testing code...
+        shell: bash
+        run: |
+          go install github.com/ory/go-acc@latest
+          go-acc -o coverage.txt ./...
+
+  golangci:
+    name: Static analysis via golangci-lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setting up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+        id: go
+
+      - name: Getting dependencies...
+        shell: bash
+        run: |
+          go get -v -t -d ./...
+
+      - name: Run golangci-lint linter
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout 5m
+          #skip-pkg-cache: true
+
+  gosec:
+    name: Static analysis via gosec
+    runs-on: ubuntu-22.04
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setting up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+        id: go
+
+      - name: Run Gosec...
+        shell: bash
+        run: |
+          go get -d ./...
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -tests ./...
+
+  govuln:
+    name: Go vulnerability database check
+    runs-on: ubuntu-22.04
+    env:
+      GO111MODULE: on
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setting up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+  
+      - name: Govuln check
+        shell: bash
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
