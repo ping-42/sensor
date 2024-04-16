@@ -23,3 +23,7 @@ Development is best done via a Github Codespace - head over to the [42lib](https
 export PING42_TELEMETRY_SERVER="ws://localhost:8080"
 go run .
 ```
+
+## Shipping a new Sensor version
+
+To ship a new version, simply create a tag and Goreleaser will take care of the release process with an action with a new image being generated in [Packages](https://github.com/ping-42/sensor/pkgs/container/sensor).
