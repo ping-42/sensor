@@ -8,6 +8,7 @@ builds:
   goarch:
   - amd64
   - arm64
+  - arm
   mod_timestamp: '{{ .CommitTimestamp }}'
   flags:
     # trims path
@@ -54,25 +55,47 @@ dockers:
     - "--label=org.opencontainers.image.revision={{.FullCommit}}"
     - "--label=org.opencontainers.image.version={{.Version}}"
     - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+# armv8
 - image_templates:
   - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
   use: buildx
   goarch: arm64
+  goarm: 8
   dockerfile: Dockerfile
   build_flag_templates:
-    - "--platform=linux/arm64/v8"
+    - "--platform=linux/arm64"
     - "--pull"
     - "--label=org.opencontainers.image.created={{.Date}}"
     - "--label=org.opencontainers.image.name={{.ProjectName}}"
     - "--label=org.opencontainers.image.revision={{.FullCommit}}"
     - "--label=org.opencontainers.image.version={{.Version}}"
     - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+# armv6
+- image_templates:
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-armv6"
+  use: buildx
+  goarch: arm
+  dockerfile: Dockerfile
+  build_flag_templates:
+    - "--platform=linux/arm"
+    - "--pull"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.name={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
+    - "--label=org.opencontainers.image.source={{.GitURL}}"
+
 docker_manifests:
 - name_template: "ghcr.io/ping-42/sensor:{{ .Version }}"
   image_templates:
   - "ghcr.io/ping-42/sensor:{{ .Version }}-amd64"
   - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-armv6"
+
 - name_template: "ghcr.io/ping-42/sensor:latest"
   image_templates:
   - "ghcr.io/ping-42/sensor:{{ .Version }}-amd64"
   - "ghcr.io/ping-42/sensor:{{ .Version }}-arm64v8"
+  - "ghcr.io/ping-42/sensor:{{ .Version }}-armv6"
