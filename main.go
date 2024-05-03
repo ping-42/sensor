@@ -61,10 +61,9 @@ func main() {
 	defer s.WsConn.Close()
 
 	// start monitoring CPU usage, RAM... in a goroutine.
-	go monitorHostTelementry()
+	go s.monitorHostTelementry()
 
 	// start working
-
 	//TODO This should probably be handled somehow in a loop with tasks being discarded upon failure
 	err = s.handleTasks()
 	if err != nil {

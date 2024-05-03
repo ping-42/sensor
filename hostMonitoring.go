@@ -1,32 +1,20 @@
 package main
 
 import (
+	"context"
 	"runtime"
-	"sync"
-	"time"
 
-	"github.com/ping-42/42lib/sensorTask"
+	"github.com/ping-42/42lib/constants"
+	"github.com/ping-42/42lib/sensor"
+	"github.com/ping-42/42lib/wss"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/net"
+	gopsutilnet "github.com/shirou/gopsutil/v3/net"
 )
-
-var (
-	latestHostTelemetry sensorTask.HostTelemetry
-	cpuUsageLock        sync.RWMutex
-)
-
-const monitorPeriod = 5 * time.Second
-
-func (s *Sensor) getLatestHostTelemetry() sensorTask.HostTelemetry {
-	cpuUsageLock.RLock()
-	defer cpuUsageLock.RUnlock()
-	return latestHostTelemetry
-}
 
 // monitorHostTelementry getting CPU, RAM, NumGoroutine sample on each 5 sec
-func monitorHostTelementry() {
-
+func (s Sensor) monitorHostTelementry() {
+	ctx := context.Background() //TODO think for timeouts
 	for {
 		// CPU info
 		cpuInfo, err := cpu.Info()
@@ -40,7 +28,7 @@ func monitorHostTelementry() {
 		}
 
 		// CPU usage
-		cpuUsage, err := cpu.Percent(monitorPeriod, false)
+		cpuUsage, err := cpu.Percent(constants.TelemetryMonitorPeriod, false)
 		if err != nil {
 			sensorLogger.Error("Error getting cpuUsage", err.Error())
 			continue
@@ -58,32 +46,33 @@ func monitorHostTelementry() {
 		}
 
 		// Network usage
-		netIO, err := net.IOCounters(true)
+		netIO, err := gopsutilnet.IOCounters(true)
 		if err != nil {
 			sensorLogger.Error("Error getting net.IOCounters", err.Error())
 			continue
 		}
-		netw := []sensorTask.Network{}
+		netw := []sensor.Network{}
 		for _, io := range netIO {
-			netw = append(netw, sensorTask.Network{Name: io.Name, BytesSent: io.BytesSent, BytesRecv: io.BytesRecv})
+			netw = append(netw, sensor.Network{Name: io.Name, BytesSent: io.BytesSent, BytesRecv: io.BytesRecv})
 		}
 
-		cpuUsageLock.Lock()
-
+		var hostTelemetry sensor.HostTelemetry
+		hostTelemetry.MessageGeneralType = wss.MessageGeneralType(wss.MessageTypeTelemtry)
 		// TODO can have more than one cpu?
-		latestHostTelemetry.Cpu = sensorTask.Cpu{
+		hostTelemetry.Cpu = sensor.Cpu{
 			ModelName: cpuInfo[0].ModelName,
 			Cores:     uint16(cpuInfo[0].Cores),
 			CpuUsage:  cpuUsage[0],
 		}
-		latestHostTelemetry.Memory = sensorTask.Memory{
+		hostTelemetry.Memory = sensor.Memory{
 			Total:       mem.Total,
 			Used:        mem.Used,
 			UsedPercent: mem.UsedPercent,
 			Free:        mem.Free,
 		}
-		latestHostTelemetry.Network = netw
-		latestHostTelemetry.GoRoutines = runtime.NumGoroutine()
-		cpuUsageLock.Unlock()
+		hostTelemetry.Network = netw
+		hostTelemetry.GoRoutines = runtime.NumGoroutine()
+
+		go hostTelemetry.SendToServer(ctx, s.WsConn)
 	}
 }

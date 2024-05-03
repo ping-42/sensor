@@ -6,13 +6,13 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/ping-42/42lib/logger"
-	"github.com/ping-42/42lib/sensorTask"
+	"github.com/ping-42/42lib/sensor"
+	"github.com/ping-42/42lib/wss"
 	log "github.com/sirupsen/logrus"
 
 	"encoding/base64"
@@ -27,11 +27,11 @@ import (
 
 // Sensor main sensor struct
 type Sensor struct {
-	sensorId     string
+	sensorId     uuid.UUID
 	sensorSecret string
 
 	WsConn net.Conn
-	Tasks  map[sensorTask.TaskName]sensorTask.TaskRunner
+	Tasks  map[sensor.TaskName]sensor.TaskRunner
 }
 
 // Build a JWT Token and connect to the telemetry server
@@ -109,9 +109,10 @@ func (s *Sensor) doTask(ctx context.Context, pool <-chan struct{}, msg []byte) {
 	})
 
 	// init the task reponse that will be sent to the server
-	var response = sensorTask.TResult{
-		TaskId:   task.GetId(),
-		TaskName: task.GetName(),
+	var response = sensor.TResult{
+		MessageGeneralType: wss.MessageGeneralType(wss.MessageTypeTaskResult),
+		TaskId:             task.GetId(),
+		TaskName:           task.GetName(),
 	}
 
 	// the actual task execution
@@ -121,9 +122,6 @@ func (s *Sensor) doTask(ctx context.Context, pool <-chan struct{}, msg []byte) {
 		response.Error = fmt.Errorf("error in task.Run(), %v", err).Error()
 	}
 	response.Result = res
-
-	// get and set the latest host telemetry as cpu, mem..
-	response.HostTelemetry = s.getLatestHostTelemetry()
 
 	err = response.SendToServer(ctx, s.WsConn)
 	if err != nil {
@@ -136,7 +134,7 @@ func (s *Sensor) doTask(ctx context.Context, pool <-chan struct{}, msg []byte) {
 
 }
 
-func (s *Sensor) factoryTask(ctx context.Context, msg []byte) (resultTask sensorTask.TaskRunner, err error) {
+func (s *Sensor) factoryTask(ctx context.Context, msg []byte) (resultTask sensor.TaskRunner, err error) {
 
 	// check if the context is done
 	if ctx.Err() != nil {
@@ -144,7 +142,7 @@ func (s *Sensor) factoryTask(ctx context.Context, msg []byte) (resultTask sensor
 		return
 	}
 
-	baseTask := sensorTask.Task{}
+	baseTask := sensor.Task{}
 	err = json.Unmarshal(msg, &baseTask)
 	if err != nil {
 		err = fmt.Errorf("can not build base Task from the received task:%v, %v", string(msg), err)
@@ -190,8 +188,8 @@ func (s *Sensor) factoryTask(ctx context.Context, msg []byte) (resultTask sensor
 }
 
 func (s *Sensor) buildJwtToken() (jwtToken string, err error) {
-	if s.sensorId == "" || s.sensorSecret == "" {
-		err = fmt.Errorf("missing sensorSecret or sensorId")
+	if s.sensorSecret == "" {
+		err = fmt.Errorf("missing sensorSecret")
 		return
 	}
 
@@ -213,20 +211,27 @@ func (s *Sensor) buildJwtToken() (jwtToken string, err error) {
 // Parses a Sensor Token for use in authentication and telemetry submission
 func (s *Sensor) parseSensorToken(sensorEnvToken string) (err error) {
 
+	// Parses a Sensor Token to creds
 	t, err := base64.StdEncoding.DecodeString(sensorEnvToken)
 	if err != nil {
 		err = fmt.Errorf("base64.StdEncoding.DecodeString sensorEnvToken: %v", err)
 		return
 	}
 
-	parsed := strings.Split(string(t), ".")
-	if len(parsed) != 2 {
-		err = fmt.Errorf("unexpected token struct")
+	var sensorCreds sensor.Creds
+	err = json.Unmarshal(t, &sensorCreds)
+	if err != nil {
+		err = fmt.Errorf("can not unmershal sensorEnvToken: %v, %v", err, string(t))
 		return
 	}
 
-	s.sensorId = parsed[0]
-	s.sensorSecret = parsed[1]
+	if sensorCreds.Secret == "" {
+		err = fmt.Errorf("empty Secret in sensorEnvToken: %v", string(t))
+		return
+	}
+
+	s.sensorId = sensorCreds.SensorId
+	s.sensorSecret = sensorCreds.Secret
 	return
 }
 
