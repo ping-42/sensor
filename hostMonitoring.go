@@ -73,6 +73,10 @@ func (s Sensor) monitorHostTelementry() {
 		hostTelemetry.Network = netw
 		hostTelemetry.GoRoutines = runtime.NumGoroutine()
 
-		go hostTelemetry.SendToServer(ctx, s.WsConn)
+		err = hostTelemetry.SendToServer(ctx, s.WsConn) //TODO do we need goroutine here?
+		if err != nil {
+			sensorLogger.Error("hostTelemetry.SendToServer, ", err.Error())
+			continue
+		}
 	}
 }
