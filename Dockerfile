@@ -1,5 +1,5 @@
 # Begin the proper packaging of the image to run the binary.
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 ENV TZ UTC
 ENV LANG en_US.UTF-8
@@ -28,11 +28,9 @@ RUN find /etc/ssl/certs -type f -exec chmod 0644 {} \; && \
   find /usr/share/ca-certificates -type f -printf "%P\n" > /etc/ca-certificates.conf && \
   dpkg-reconfigure ca-certificates && update-ca-certificates
 
-RUN addgroup -q --gid 1337 "ping42" \
-	&& adduser -q --uid 1337 \
-	--disabled-password \
-	--home "/go" \
-	--ingroup "ping42" "ping42"
+RUN echo $PATH
+RUN groupadd --gid 1337 "ping42" \
+	&& useradd --uid 1337 --gid 1337 --home "/go" "ping42"
 
 WORKDIR /go
 

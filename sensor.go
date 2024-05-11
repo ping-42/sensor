@@ -253,10 +253,9 @@ func wsConnectToServer(jwtToken string) (conn net.Conn, err error) {
 
 	if err != nil {
 		sensorLogger.WithFields(log.Fields{
-			"localAddr":       conn.LocalAddr().String(),
-			"remoteAddr":      conn.RemoteAddr().String(),
-			"telemetryServer": telemetryServerUrl,
-			"error":           fmt.Errorf("%v", err),
+			"telemetryServer": 	telemetryServerUrl,
+			"dialUrl": 		   	dialURL,
+			"error":           	fmt.Errorf("%v", err),
 		}).Error("Unable to connect to telemetry server")
 		return
 	}
