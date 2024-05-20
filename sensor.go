@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/gobwas/ws"
@@ -35,16 +34,12 @@ type Sensor struct {
 
 	WsConn net.Conn
 	Tasks  map[sensor.TaskName]sensor.TaskRunner
+
+	telemetryServerUrl string
 }
 
 // Build a JWT Token and connect to the telemetry server
 func (s *Sensor) connectToTelemetryServer() (err error) {
-
-	telemetryServerUrl := os.Getenv("PING42_TELEMETRY_SERVER")
-	if telemetryServerUrl == "" {
-		telemetryServerUrl = "wss://api.ping42.net"
-	}
-
 	// Retry logic
 	for attempt := 1; attempt <= 3000; attempt++ {
 
@@ -56,10 +51,10 @@ func (s *Sensor) connectToTelemetryServer() (err error) {
 			return
 		}
 
-		wsConn, err := wsConnectToServer(telemetryServerUrl, jwtToken)
+		wsConn, err := wsConnectToServer(s.telemetryServerUrl, jwtToken)
 		if err != nil {
 			sensorLogger.WithFields(log.Fields{
-				"telemetryServer": telemetryServerUrl,
+				"telemetryServer": s.telemetryServerUrl,
 				"error":           fmt.Errorf("%v", err),
 				"attempt":         attempt,
 			}).Error("Unable to connect to telemetry server")
@@ -74,7 +69,7 @@ func (s *Sensor) connectToTelemetryServer() (err error) {
 		sensorLogger.WithFields(log.Fields{
 			"localAddr":       wsConn.LocalAddr(),
 			"remoteAddr":      wsConn.RemoteAddr().String(),
-			"telemetryServer": telemetryServerUrl,
+			"telemetryServer": s.telemetryServerUrl,
 		}).Info("Connection to telemetry server established...")
 
 		// store the connection
@@ -275,15 +270,7 @@ func (s *Sensor) parseSensorToken(sensorEnvToken string) (err error) {
 }
 
 // Establish a Websocket connection to the telemetry server
-// func wsConnectToServer(telemetryServerUrl string, jwtToken string) (conn net.Conn, err error) {
-// 	dialURL := fmt.Sprintf("%v/?sensor_token=%v", telemetryServerUrl, url.QueryEscape(jwtToken))
-// 	conn, _, _, err = ws.Dial(context.Background(), dialURL)
-// 	return
-// }
-
 func wsConnectToServer(telemetryServerUrl string, jwtToken string) (conn net.Conn, err error) {
-	//dialURL := fmt.Sprintf("%v/?sensor_token=%v", telemetryServerUrl, url.QueryEscape(jwtToken))
-
 	header := ws.HandshakeHeaderHTTP(gohttp.Header{
 		"Authorization": []string{jwtToken},
 	})

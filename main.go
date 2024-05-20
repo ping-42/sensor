@@ -35,8 +35,13 @@ func init() {
 
 func main() {
 
+	telemetryServerUrl := os.Getenv("PING42_TELEMETRY_SERVER")
+	if telemetryServerUrl == "" {
+		telemetryServerUrl = "wss://api.ping42.net"
+	}
+
 	// init the base sensor struct
-	s := Sensor{}
+	s := Sensor{telemetryServerUrl: telemetryServerUrl}
 
 	sensorEnvToken := os.Getenv("PING42_SENSOR_TOKEN")
 	if sensorEnvToken == "" {
