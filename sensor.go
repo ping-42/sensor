@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"time"
 
@@ -17,6 +16,10 @@ import (
 
 	"encoding/base64"
 	"encoding/json"
+
+	"io"
+
+	gohttp "net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -37,21 +40,49 @@ type Sensor struct {
 // Build a JWT Token and connect to the telemetry server
 func (s *Sensor) connectToTelemetryServer() (err error) {
 
-	jwtToken, err := s.buildJwtToken()
-	if err != nil {
+	telemetryServerUrl := os.Getenv("PING42_TELEMETRY_SERVER")
+	if telemetryServerUrl == "" {
+		telemetryServerUrl = "wss://api.ping42.net"
+	}
+
+	// Retry logic
+	for attempt := 1; attempt <= 3000; attempt++ {
+
+		jwtToken, er := s.buildJwtToken()
+		if er != nil {
+			sensorLogger.WithFields(log.Fields{
+				"error": er.Error(),
+			}).Error("Unable to build a JWT Token.")
+			return
+		}
+
+		wsConn, err := wsConnectToServer(telemetryServerUrl, jwtToken)
+		if err != nil {
+			sensorLogger.WithFields(log.Fields{
+				"telemetryServer": telemetryServerUrl,
+				"error":           fmt.Errorf("%v", err),
+				"attempt":         attempt,
+			}).Error("Unable to connect to telemetry server")
+
+			// Exponential backoff for retries
+			backoff := time.Duration(10*attempt) * time.Second
+
+			time.Sleep(backoff)
+			continue
+		}
+
 		sensorLogger.WithFields(log.Fields{
-			"error": err.Error(),
-		}).Error("Unable to build a JWT Token.")
-		return
+			"localAddr":       wsConn.LocalAddr(),
+			"remoteAddr":      wsConn.RemoteAddr().String(),
+			"telemetryServer": telemetryServerUrl,
+		}).Info("Connection to telemetry server established...")
+
+		// store the connection
+		s.WsConn = wsConn
+		return nil
 	}
 
-	wsConn, err := wsConnectToServer(jwtToken)
-	if err != nil {
-		return
-	}
-
-	s.WsConn = wsConn
-	return
+	return fmt.Errorf("unable to connect to telemetry server after multiple attempts")
 }
 
 func (s *Sensor) handleTasks() (err error) {
@@ -65,6 +96,14 @@ func (s *Sensor) handleTasks() (err error) {
 			sensorLogger.WithFields(log.Fields{
 				"error": er.Error(),
 			}).Error("Failed to read task message from server!")
+
+			if er == io.EOF {
+				sensorLogger.Error("Connection lost. Attempting to reconnect...")
+				if err := s.connectToTelemetryServer(); err != nil {
+					return err
+				}
+				continue
+			}
 			return
 		}
 
@@ -236,35 +275,23 @@ func (s *Sensor) parseSensorToken(sensorEnvToken string) (err error) {
 }
 
 // Establish a Websocket connection to the telemetry server
-func wsConnectToServer(jwtToken string) (conn net.Conn, err error) {
+// func wsConnectToServer(telemetryServerUrl string, jwtToken string) (conn net.Conn, err error) {
+// 	dialURL := fmt.Sprintf("%v/?sensor_token=%v", telemetryServerUrl, url.QueryEscape(jwtToken))
+// 	conn, _, _, err = ws.Dial(context.Background(), dialURL)
+// 	return
+// }
 
-	// Allow the URL to be overridden
-	telemetryServerUrl := os.Getenv("PING42_TELEMETRY_SERVER")
-	if telemetryServerUrl == "" {
-		telemetryServerUrl = "wss://api.ping42.net"
+func wsConnectToServer(telemetryServerUrl string, jwtToken string) (conn net.Conn, err error) {
+	//dialURL := fmt.Sprintf("%v/?sensor_token=%v", telemetryServerUrl, url.QueryEscape(jwtToken))
+
+	header := ws.HandshakeHeaderHTTP(gohttp.Header{
+		"Authorization": []string{jwtToken},
+	})
+
+	dialer := ws.Dialer{
+		Header: header,
 	}
-
-	//TODO: Should we send the token here as a header?
-	//TODO: How do we make sure this is always https?
-	dialURL := fmt.Sprintf("%v/?sensor_token=%v", telemetryServerUrl, url.QueryEscape(jwtToken))
-
-	// Place a connection request
-	conn, _, _, err = ws.Dial(context.Background(), dialURL)
-
-	if err != nil {
-		sensorLogger.WithFields(log.Fields{
-			"telemetryServer": 	telemetryServerUrl,
-			"dialUrl": 		   	dialURL,
-			"error":           	fmt.Errorf("%v", err),
-		}).Error("Unable to connect to telemetry server")
-		return
-	}
-
-	sensorLogger.WithFields(log.Fields{
-		"localAddr":       conn.LocalAddr(),
-		"remoteAddr":      conn.RemoteAddr().String(),
-		"telemetryServer": telemetryServerUrl,
-	}).Info("Connection to telemetry server established...")
+	conn, _, _, err = dialer.Dial(context.Background(), telemetryServerUrl)
 
 	return
 }
