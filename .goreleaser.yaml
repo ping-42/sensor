@@ -1,4 +1,5 @@
 project_name: ping42-sensor
+version: 2
 
 builds:
 - env:
