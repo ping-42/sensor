@@ -10,6 +10,7 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/ping-42/42lib/logger"
 	"github.com/ping-42/42lib/sensor"
+	"github.com/ping-42/42lib/traceroute"
 	"github.com/ping-42/42lib/wss"
 	log "github.com/sirupsen/logrus"
 
@@ -206,12 +207,20 @@ func (s *Sensor) factoryTask(ctx context.Context, msg []byte) (resultTask sensor
 		resultTask = icmpTask
 
 	case http.TaskName:
-		icmpTask, er := http.NewTaskFromBytes(msg)
+		httpTask, er := http.NewTaskFromBytes(msg)
 		if er != nil {
 			err = er
 			return
 		}
-		resultTask = icmpTask
+		resultTask = httpTask
+
+	case traceroute.TaskName:
+		tracerouteTask, er := traceroute.NewTaskFromBytes(msg)
+		if er != nil {
+			err = er
+			return
+		}
+		resultTask = tracerouteTask
 
 	default:
 		err = fmt.Errorf("unexpected Task Name:%v, %v", baseTask.Name, string(msg))
