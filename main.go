@@ -30,7 +30,7 @@ func init() {
 		"version":   version,
 		"commit":    commit,
 		"buildDate": date,
-	}).Info("Starting PING42 Sensor Client...")
+	}).Info("Starting PING42 Sensor Client")
 }
 
 func main() {
