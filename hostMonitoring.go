@@ -61,8 +61,9 @@ func (s Sensor) monitorHostTelementry() {
 		// TODO can have more than one cpu?
 		hostTelemetry.Cpu = sensor.Cpu{
 			ModelName: cpuInfo[0].ModelName,
-			Cores:     uint16(cpuInfo[0].Cores),
-			CpuUsage:  cpuUsage[0],
+			//#nosec G115
+			Cores:    uint16(cpuInfo[0].Cores),
+			CpuUsage: cpuUsage[0],
 		}
 		hostTelemetry.Memory = sensor.Memory{
 			Total:       mem.Total,
