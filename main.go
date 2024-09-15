@@ -63,7 +63,7 @@ func main() {
 	}
 
 	// defer closing the ws connection
-	defer s.WsConn.Close()
+	defer s.WsConn.Close() //nolint
 
 	// start monitoring CPU usage, RAM... in a goroutine.
 	go s.monitorHostTelementry()

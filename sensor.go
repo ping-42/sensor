@@ -58,7 +58,7 @@ func (s *Sensor) reconnect() error {
 	s.reconnectOnce.Do(func() {
 		go func() {
 			if s.WsConn != nil {
-				s.WsConn.Close()
+				s.WsConn.Close() //nolint
 			}
 
 			err := s.connectToTelemetryServer()
@@ -108,7 +108,7 @@ func (s *Sensor) connectToTelemetryServer() (err error) {
 			}
 
 			// adding jitter to backoff to avoid synchronized retries
-			jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
+			jitter := time.Duration(rand.Intn(1000)) * time.Millisecond //nolint
 			time.Sleep(backoff + jitter)
 
 			continue
