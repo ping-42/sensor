@@ -14,7 +14,7 @@ import (
 )
 
 // monitorHostTelementry getting CPU, RAM, NumGoroutine sample on each 5 sec
-func (s Sensor) monitorHostTelementry() {
+func (s *Sensor) monitorHostTelementry() {
 	ctx := context.Background() //TODO think for timeouts
 	for {
 		// CPU info
