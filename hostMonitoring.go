@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"runtime"
+	"strings"
 
 	"github.com/ping-42/42lib/constants"
 	"github.com/ping-42/42lib/sensor"
@@ -77,6 +78,20 @@ func (s Sensor) monitorHostTelementry() {
 		err = hostTelemetry.SendToServer(ctx, s.WsConn)
 		if err != nil {
 			sensorLogger.Error("hostTelemetry.SendToServer, ", err.Error())
+
+			if strings.Contains(err.Error(), "connection lost") {
+				sensorLogger.Error("Attempting to reconnect to the telemetry server from monitorHostTelementry...")
+
+				// Attempt reconnection
+				reconnectErr := s.reconnect()
+				if reconnectErr != nil {
+					sensorLogger.Error("Reconnection failed: ", reconnectErr.Error())
+					return
+				}
+
+				sensorLogger.Info("Reconnected to telemetry server")
+			}
+
 			continue
 		}
 	}

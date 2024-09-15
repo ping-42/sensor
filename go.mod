@@ -7,7 +7,7 @@ toolchain go1.22.6
 require (
 	github.com/gobwas/ws v1.4.0
 	github.com/google/uuid v1.6.0
-	github.com/ping-42/42lib v0.1.28
+	github.com/ping-42/42lib v0.1.30
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/sirupsen/logrus v1.9.3
