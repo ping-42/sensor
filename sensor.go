@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"net"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gobwas/ws"
@@ -16,8 +19,6 @@ import (
 
 	"encoding/base64"
 	"encoding/json"
-
-	"io"
 
 	gohttp "net/http"
 
@@ -36,44 +37,91 @@ type Sensor struct {
 	WsConn net.Conn
 	Tasks  map[sensor.TaskName]sensor.TaskRunner
 
+	mu            sync.Mutex
+	reconnectOnce sync.Once
+	reconnectDone chan error
+
 	telemetryServerUrl string
 }
 
-// Build a JWT Token and connect to the telemetry server
-func (s *Sensor) connectToTelemetryServer() (err error) {
-	// Retry logic
-	for attempt := 1; attempt <= 3000; attempt++ {
+// ensure that only one reconnect operation runs at a time
+func (s *Sensor) reconnect() error {
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.reconnectDone == nil {
+		s.reconnectDone = make(chan error)
+	}
+
+	// sync.Once to ensure the reconnection logic is executed only once
+	s.reconnectOnce.Do(func() {
+		go func() {
+			if s.WsConn != nil {
+				s.WsConn.Close() // #nosec G104
+			}
+
+			err := s.connectToTelemetryServer()
+
+			s.reconnectDone <- err
+			close(s.reconnectDone)
+		}()
+	})
+
+	// block until reconnection is completed (waiting for the reconnectDone channel to be closed)
+	err := <-s.reconnectDone
+
+	// reset sync.Once so future reconnections can run if needed
+	s.reconnectOnce = sync.Once{}
+	s.reconnectDone = nil
+
+	return err
+}
+
+func (s *Sensor) connectToTelemetryServer() (err error) {
+	// retry logic
+	for attempt := 1; attempt <= 30000; attempt++ {
+
+		// build JWT token
 		jwtToken, er := s.buildJwtToken()
 		if er != nil {
 			sensorLogger.WithFields(log.Fields{
 				"error": er.Error(),
 			}).Error("Unable to build a JWT Token.")
-			return
+			return er
 		}
 
+		// attempt WebSocket connection
 		wsConn, err := wsConnectToServer(s.telemetryServerUrl, jwtToken)
 		if err != nil {
+			// Log error with retry attempt
 			sensorLogger.WithFields(log.Fields{
 				"telemetryServer": s.telemetryServerUrl,
 				"error":           fmt.Errorf("%v", err),
 				"attempt":         attempt,
 			}).Error("Unable to connect to telemetry server")
 
-			// Exponential backoff for retries
+			// exponential backoff for retries with a cap (e.g., max 10min)
 			backoff := time.Duration(10*attempt) * time.Second
+			if backoff > 10*time.Minute {
+				backoff = 10 * time.Minute
+			}
 
-			time.Sleep(backoff)
+			// adding jitter to backoff to avoid synchronized retries
+			jitter := time.Duration(rand.Intn(1000)) * time.Millisecond // #nosec G404
+			time.Sleep(backoff + jitter)
+
 			continue
 		}
 
+		// log successful connection
 		sensorLogger.WithFields(log.Fields{
 			"localAddr":       wsConn.LocalAddr(),
 			"remoteAddr":      wsConn.RemoteAddr().String(),
 			"telemetryServer": s.telemetryServerUrl,
 		}).Info("Connection to telemetry server established...")
 
-		// store the connection
+		// store the WebSocket connection
 		s.WsConn = wsConn
 		return nil
 	}
@@ -87,20 +135,29 @@ func (s *Sensor) handleTasks() (err error) {
 	pool := make(chan struct{}, goroutinesPoolSize)
 
 	for {
+
+		// ensure WebSocket connection is established before handling tasks
+		if s.WsConn == nil {
+			sensorLogger.Error("WebSocket connection is not established. Attempting to reconnect...")
+			if err := s.reconnect(); err != nil {
+				return fmt.Errorf("failed to connect to telemetry server: %v", err)
+			}
+			// continue the loop after reconnecting
+			continue
+		}
+
 		msg, op, er := wsutil.ReadServerData(s.WsConn)
 		if er != nil {
 			sensorLogger.WithFields(log.Fields{
 				"error": er.Error(),
 			}).Error("Failed to read task message from server!")
 
-			if er == io.EOF {
-				sensorLogger.Error("Connection lost. Attempting to reconnect...")
-				if err := s.connectToTelemetryServer(); err != nil {
-					return err
-				}
-				continue
+			sensorLogger.Error("Connection issue. Attempting to reconnect...")
+			if err := s.reconnect(); err != nil {
+				return fmt.Errorf("failed to reconnect: %w", err)
 			}
-			return
+			// continue the loop after reconnecting
+			continue
 		}
 
 		if op != ws.OpText {
@@ -162,6 +219,28 @@ func (s *Sensor) doTask(ctx context.Context, pool <-chan struct{}, msg []byte) {
 	if err != nil {
 		// this error will not be sent to the server, will need some mechanism for sending/pulling to the server
 		logger.LogError(err.Error(), "error in SendToServer()", sensorLogger)
+
+		if strings.Contains(err.Error(), "connection lost") {
+			sensorLogger.Error("Attempting to reconnect to the telemetry server from doTask...")
+
+			// Attempt reconnection
+			reconnectErr := s.reconnect()
+			if reconnectErr != nil {
+				sensorLogger.Error("Reconnection failed: ", reconnectErr.Error())
+				return
+			}
+
+			sensorLogger.Info("Reconnected to telemetry server, try for second time to send the data")
+
+			// second try to send the data
+			err = response.SendToServer(ctx, s.WsConn)
+			if err != nil {
+				logger.LogError(err.Error(), "error in SendToServer() after reconnect", sensorLogger)
+				return
+			}
+			sensorLogger.Info("task response sent to server after reconect")
+			return
+		}
 		return
 	}
 
