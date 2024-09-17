@@ -39,6 +39,7 @@ COPY sensor ./sensor
 # Set permissions on app dir and clenup /tmp/*.
 RUN chown ping42: -R ./ && chmod go-w -R ./ && rm -rf /tmp/*
 
-USER ping42
+# Sensor process runs as root typically so that traceroute magic can happen
+# USER ping42
 
 CMD ["./sensor"]
