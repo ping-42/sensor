@@ -220,31 +220,35 @@ func (s *Sensor) doTask(ctx context.Context, pool <-chan struct{}, msg []byte) {
 		// this error will not be sent to the server, will need some mechanism for sending/pulling to the server
 		logger.LogError(err.Error(), "error in SendToServer()", sensorLogger)
 
-		if strings.Contains(err.Error(), "connection lost") {
+		// basic socket errors should be ignored and reconnections should happen
+		if strings.Contains(err.Error(), "connection lost") ||
+			strings.Contains(err.Error(), "broken pipe") {
 			sensorLogger.Error("Attempting to reconnect to the telemetry server from doTask...")
 
-			// Attempt reconnection
+			// attempt reconnection to the telemetry server
+			// if this fails, we will panic for now and perhaps try to pool up the data locally
+			// until we can establish a connection again
 			reconnectErr := s.reconnect()
 			if reconnectErr != nil {
 				sensorLogger.Error("Reconnection failed: ", reconnectErr.Error())
-				return
+				panic("Unable to reconnect to server")
 			}
 
-			sensorLogger.Info("Reconnected to telemetry server, try for second time to send the data")
+			sensorLogger.Info("Reconnected to telemetry server, attempting to resend data")
 
 			// second try to send the data
 			err = response.SendToServer(ctx, s.WsConn)
 			if err != nil {
-				logger.LogError(err.Error(), "error in SendToServer() after reconnect", sensorLogger)
+				logger.LogError(err.Error(), "error in SendToServer() after reconnecting", sensorLogger)
 				return
 			}
-			sensorLogger.Info("task response sent to server after reconect")
+			sensorLogger.Info("Task response sent to server after reconnect")
 			return
 		}
 		return
 	}
 
-	sensorLogger.Info("task response sent to server")
+	sensorLogger.Info("Task response sent to server")
 
 }
 

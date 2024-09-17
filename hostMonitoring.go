@@ -79,7 +79,8 @@ func (s *Sensor) monitorHostTelementry() {
 		if err != nil {
 			sensorLogger.Error("hostTelemetry.SendToServer, ", err.Error())
 
-			if strings.Contains(err.Error(), "connection lost") {
+			if strings.Contains(err.Error(), "connection lost") ||
+				strings.Contains(err.Error(), "broken pipe") {
 				sensorLogger.Error("Attempting to reconnect to the telemetry server from monitorHostTelementry...")
 
 				// Attempt reconnection
