@@ -44,4 +44,4 @@ require (
 	golang.org/x/tools v0.25.0 // indirect
 )
 
-// replace github.com/ping-42/42lib => ../42lib
+replace github.com/ping-42/42lib => ../42lib
