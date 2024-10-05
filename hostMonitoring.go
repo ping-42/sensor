@@ -54,7 +54,13 @@ func (s *Sensor) monitorHostTelementry() {
 		}
 		netw := []sensor.Network{}
 		for _, io := range netIO {
-			netw = append(netw, sensor.Network{Name: io.Name, BytesSent: io.BytesSent, BytesRecv: io.BytesRecv})
+			netw = append(netw, sensor.Network{
+				Name:        io.Name,
+				BytesSent:   io.BytesSent,
+				BytesRecv:   io.BytesRecv,
+				PacketsSent: io.PacketsSent,
+				PacketsRecv: io.PacketsRecv,
+			})
 		}
 
 		var hostTelemetry sensor.HostTelemetry

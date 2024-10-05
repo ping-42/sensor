@@ -32,6 +32,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/ping-42/42lib v0.1.31 h1:BPq+gyn3CDSADc+EWPbguIDGKsQ/cdVb9LRnD5muwXM=
 github.com/ping-42/42lib v0.1.31/go.mod h1:9HUVnShP0IsQILmlki9OOkp/NCMIdPxuTWA8ApyfJk8=
+github.com/ping-42/42lib v0.1.32-0.20241005100404-2b29cb59d1a2 h1:IKWa/HET3p9Ogl7Coc0266xFTuVppYrJJPID/1MsCcE=
+github.com/ping-42/42lib v0.1.32-0.20241005100404-2b29cb59d1a2/go.mod h1:9HUVnShP0IsQILmlki9OOkp/NCMIdPxuTWA8ApyfJk8=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
