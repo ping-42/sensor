@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -27,12 +28,14 @@ import (
 	"github.com/ping-42/42lib/dns"
 	"github.com/ping-42/42lib/http"
 	"github.com/ping-42/42lib/icmp"
+	netICMP "golang.org/x/net/icmp"
 )
 
 // Sensor main sensor struct
 type Sensor struct {
 	sensorId     uuid.UUID
 	sensorSecret string
+	Cap          capabilities
 
 	WsConn net.Conn
 	Tasks  map[sensor.TaskName]sensor.TaskRunner
@@ -42,6 +45,29 @@ type Sensor struct {
 	reconnectDone chan error
 
 	telemetryServerUrl string
+}
+
+// capabilities holds the sensor's capabilities and can be extended to include more fields
+type capabilities struct {
+	IsRoot      bool
+	Ipv6Enabled bool
+}
+
+// isRoot checks if the proccess is running with root privileges
+// effective user id root=0
+func isRoot() bool {
+	return os.Geteuid() == 0
+}
+
+// isIpv6Enabled checks if the sensor can listen for ICMP on ipv6
+func isIpv6Enabled() bool {
+	ipv6Conn, err := netICMP.ListenPacket("ip6:ipv6-icmp", "::")
+	if err != nil {
+		sensorLogger.Warn("sensor cannot listen on ipv6: ", err)
+		return false
+	}
+	sensorLogger.Info("sensor can listen on ipv6: ", ipv6Conn)
+	return true
 }
 
 // ensure that only one reconnect operation runs at a time
