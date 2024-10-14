@@ -35,13 +35,32 @@ func init() {
 
 func main() {
 
+	// check if the container is privileged
+	isRoot := isRoot()
+	if !isRoot {
+		logger.Logger.Warn("sensor is not privileged")
+	} else {
+		logger.Logger.Info("sensor is privileged")
+	}
+
+	// check if the container can listen for ICMP on ipv6
+	ipv6Enabled := isIpv6Enabled()
+
 	telemetryServerUrl := os.Getenv("PING42_TELEMETRY_SERVER")
 	if telemetryServerUrl == "" {
 		telemetryServerUrl = "wss://api.ping42.net"
 	}
 
+	cap := capabilities{
+		IsRoot:      isRoot,
+		Ipv6Enabled: ipv6Enabled,
+	}
+
 	// init the base sensor struct
-	s := Sensor{telemetryServerUrl: telemetryServerUrl}
+	s := Sensor{
+		telemetryServerUrl: telemetryServerUrl,
+		Cap:                cap,
+	}
 
 	sensorEnvToken := os.Getenv("PING42_SENSOR_TOKEN")
 	if sensorEnvToken == "" {
