@@ -391,6 +391,7 @@ func (s *Sensor) parseSensorToken(sensorEnvToken string) (err error) {
 func wsConnectToServer(telemetryServerUrl string, jwtToken string) (conn net.Conn, err error) {
 	header := ws.HandshakeHeaderHTTP(gohttp.Header{
 		"Authorization": []string{jwtToken},
+		"SensorVersion": []string{version},
 	})
 
 	dialer := ws.Dialer{
