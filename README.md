@@ -35,6 +35,7 @@ The following will check for sensor updates every 24 hours and is highly recomme
 ```bash
 docker run -d \
   --name watchtower \
+  --restart=always \
   -v /var/run/docker.sock:/var/run/docker.sock \
   containrrr/watchtower ping42-sensor
 ```
