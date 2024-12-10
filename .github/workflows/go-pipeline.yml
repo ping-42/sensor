@@ -19,7 +19,7 @@ permissions:
 jobs:
   vettest:
     name: Go quality vetting and testing
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
 
   golangci:
     name: Static analysis via golangci-lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
 
   gosec:
     name: Static analysis via gosec
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       GO111MODULE: on
     steps:
@@ -99,7 +99,7 @@ jobs:
 
   govuln:
     name: Go vulnerability database check
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       GO111MODULE: on
     steps:
