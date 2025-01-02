@@ -1,11 +1,11 @@
 # Begin the proper packaging of the image to run the binary.
 FROM ubuntu:24.04
 
-ENV TZ UTC
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US:en
-ENV LC_ALL en_US.UTF-8
-ENV PATH $PATH:/usr/local/bin:/usr/local/go/bin
+ENV TZ=UTC
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+ENV PATH=$PATH:/usr/local/bin:/usr/local/go/bin
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -qqy update \

@@ -63,10 +63,10 @@ func isRoot() bool {
 func isIpv6Enabled() bool {
 	ipv6Conn, err := netICMP.ListenPacket("ip6:ipv6-icmp", "::")
 	if err != nil {
-		sensorLogger.Warn("sensor cannot listen on ipv6: ", err)
+		sensorLogger.Warn("Sensor cannot listen on ipv6: ", err)
 		return false
 	}
-	sensorLogger.Info("sensor can listen on ipv6: ", ipv6Conn)
+	sensorLogger.Info("Sensor is listening on ipv6 at ", ipv6Conn.LocalAddr().String())
 	return true
 }
 

@@ -38,9 +38,9 @@ func main() {
 	// check if the container is privileged
 	isRoot := isRoot()
 	if !isRoot {
-		logger.Logger.Warn("sensor is not privileged")
+		logger.Logger.Warn("Sensor is not privileged")
 	} else {
-		logger.Logger.Info("sensor is privileged")
+		logger.Logger.Info("Sensor is privileged")
 	}
 
 	// check if the container can listen for ICMP on ipv6
