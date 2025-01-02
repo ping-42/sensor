@@ -4,3 +4,5 @@ sensor
 .vscode/
 vendor/
 dist/
+
+__debug_bin**
