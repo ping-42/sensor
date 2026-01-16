@@ -8,8 +8,7 @@ require (
 	github.com/ping-42/42lib v0.1.47
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/shirou/gopsutil/v3 v3.24.5
-	github.com/sirupsen/logrus v1.9.3
-
+	github.com/sirupsen/logrus v1.9.4
 )
 
 require (
